@@ -1,9 +1,21 @@
+import 'package:brandwave/models/CustomUser.dart';
 import "package:flutter/material.dart";
 import 'package:brandwave/utils/serviceCard.dart';
 import 'package:brandwave/utils/recentAdCard.dart';
 
+import 'package:brandwave/services/auth.dart';
+import "package:provider/provider.dart";
+import "package:brandwave/services/database.dart";
+
+import 'package:brandwave/models/Adverts.dart';
+
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+
+  final CustomUser ? user;
+  const HomePage({
+    super.key,
+    this.user
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -27,27 +39,35 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+
+
+    final user = Provider.of<CustomUser?>((context));
+
     return SafeArea(
-      child: Scaffold(
-        body: _widgetOptions.elementAt(_selectedIndex),
-        bottomNavigationBar: BottomNavigationBar(
-          items: const <BottomNavigationBarItem>[
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.shopify_outlined),
-              label: 'Adverts',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.account_circle),
-              label: 'Account',
-            ),
-          ],
-          currentIndex: _selectedIndex,
-          selectedItemColor: const Color.fromARGB(255, 58, 144, 214),
-          onTap: _onItemTapped,
+      child: StreamProvider<List<Advert>?>.value(
+        value: DatabaseService().adverts,
+        initialData: null,
+        child: Scaffold(
+          body: _widgetOptions.elementAt(_selectedIndex),
+          bottomNavigationBar: BottomNavigationBar(
+            items: const <BottomNavigationBarItem>[
+              BottomNavigationBarItem(
+                icon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.shopify_outlined),
+                label: 'Adverts',
+              ),
+              BottomNavigationBarItem(
+                icon: Icon(Icons.account_circle),
+                label: 'Account',
+              ),
+            ],
+            currentIndex: _selectedIndex,
+            selectedItemColor: const Color.fromARGB(255, 58, 144, 214),
+            onTap: _onItemTapped,
+          ),
         ),
       ),
     );
@@ -61,6 +81,10 @@ class AppIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
+    final adverts = Provider.of<List<Advert>>(context);
+    final user = Provider.of<CustomUser?>((context));
+
     return SafeArea(
       child: ListView(
         physics: const BouncingScrollPhysics(),
@@ -90,7 +114,7 @@ class AppIntro extends StatelessWidget {
                       ),
                       Divider(height: 5.0,color: Colors.transparent,),
                       Text(
-                        "Good Morning, Andrew",
+                        "Good Morning",
                         style: TextStyle(
                           fontSize: 16.0,
                           color: Color.fromARGB(220, 36, 37, 37),
@@ -155,14 +179,23 @@ class AppIntro extends StatelessWidget {
               const SizedBox(height: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: const [
-                  RecentAdvertCard(imageUrl:"https://images.unsplash.com/photo-1511268559489-34b624fbfcf5?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8YWR2ZXJ0c3xlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60"),
-                  SizedBox(height: 5),
-                  RecentAdvertCard(imageUrl:"https://images.unsplash.com/photo-1551120239-3d20b45dcda7?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTV8fGFkdmVydHN8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60"),
-                  SizedBox(height: 5),
-                  RecentAdvertCard(imageUrl:"https://images.unsplash.com/photo-1538650261995-3a55d1353e5e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8c2Ftc3VuZyUyMG5vdGUlMjAxMHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60"),
-                  SizedBox(height: 5),
-                ],
+
+                children: adverts.map((advert) {
+                  if (advert.uid == user!.uid) {
+                    return Container(
+                      margin: const EdgeInsets.symmetric(vertical: 10.0),
+                      child: RecentAdvertCard(
+                          imageUrl: advert.imageUrl,
+                          name: advert.adName,
+                        location: advert.location,
+                          description: advert.description
+                      ),
+                    );
+                  }
+                  else {
+                    return const SizedBox(height: 0,);
+                  }
+                }).toList(),
               ),
             ],
           ),
@@ -181,45 +214,47 @@ class AdvertList extends StatefulWidget {
 
 class _AdvertListState extends State<AdvertList> {
   @override
+
+  String getUserData (CustomUser user) {
+    dynamic result = DatabaseService().getUser(user.uid.toString());
+    print(result);
+
+        return "test";
+  }
+
   Widget build(BuildContext context) {
+
+    final adverts = Provider.of<List<Advert>>(context);
+    final user = Provider.of<CustomUser?>((context));
+
     return ListView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.all(10.0),
       scrollDirection: Axis.vertical,
 
+      children: adverts.map((advert) {
+        if (advert.uid == user!.uid) {
+          return const SizedBox(height: 0.0);
+        }
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: 10.0),
+          child: AdvertCard(
+            advertName: advert.adName,
+            advertDescription: advert.description,
+            location: advert.location,
+            username: getUserData(user),
+            advertImageUrl: advert.imageUrl
+          ),
+        );
+      }).toList(),
 
-      children: const [
-        AdvertCard(
-          advertName: "Kampala lite",
-          advertDescription: "When you pressed the Get Current Location button, you will initially see a location access request to your app",
-          location: "Kampala",
-          username: "Andrew",
-          advertImageUrl: "https://images.unsplash.com/photo-1511268559489-34b624fbfcf5?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8YWR2ZXJ0c3xlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60",
-        ),
-        SizedBox(height: 20.0),
-        AdvertCard(
-          advertName: "Kampala lite",
-          advertDescription: "When you pressed the Get Current Location button, you will initially see a location access request to your app",
-          location: "Kampala",
-          username: "Andrew",
-          advertImageUrl: "https://images.unsplash.com/photo-1551120239-3d20b45dcda7?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTV8fGFkdmVydHN8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60",
-        ),
-        SizedBox(height: 20.0),
-        AdvertCard(
-          advertName: "Kampala lite",
-          advertDescription: "When you pressed the Get Current Location button, you will initially see a location access request to your app",
-          location: "Kampala",
-          username: "Andrew",
-          advertImageUrl: "https://images.unsplash.com/photo-1538650261995-3a55d1353e5e?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8c2Ftc3VuZyUyMG5vdGUlMjAxMHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60",
-        ),
-      ],
     );
   }
 }
 
 class AdvertCard extends StatelessWidget {
 
-  final String username;
+  final String ? username;
   final String location;
   final String advertName;
   final String advertDescription;
@@ -227,7 +262,7 @@ class AdvertCard extends StatelessWidget {
 
 
   const AdvertCard({
-    required this.username,
+    this.username,
     required this.location,
     required this.advertName,
     required this.advertDescription,
@@ -259,7 +294,7 @@ class AdvertCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    username,
+                    username!,
                     style: const TextStyle(
                         fontSize: 15.0,
                         fontWeight: FontWeight.w600
@@ -287,7 +322,7 @@ class AdvertCard extends StatelessWidget {
               ),
             ),
             Container(
-              height: 350,
+              height: 300,
               width: 350,
               child: FittedBox(
                 fit: BoxFit.fill,
@@ -334,8 +369,14 @@ class Profile extends StatefulWidget {
 }
 
 class _ProfileState extends State<Profile> {
+
+  final AuthService _auth = AuthService();
+
   @override
   Widget build(BuildContext context) {
+
+    final user = Provider.of<CustomUser?>((context));
+
     return SafeArea(
         child: Scaffold(
           backgroundColor: const Color.fromRGBO(255, 255, 255, 0.7),
@@ -377,14 +418,28 @@ class _ProfileState extends State<Profile> {
                   ],
                 ),
                 child: Column(
-                  children: const [
-                    ProfileDetail(label: "Username", value: "Andrew"),
-                    SizedBox(height: 20.0),
-                    ProfileDetail(label: "Full Name", value: "Kikulwe Andrew"),
-                    SizedBox(height: 20.0),
-                    ProfileDetail(label: "Email", value: "kikulweandrew@gmail.com"),
+                  children: [
+                    // ProfileDetail(label: "Username", value: "Andrew"),
+                    // SizedBox(height: 20.0),
+                    // ProfileDetail(label: "Full Name", value: "Kikulwe Andrew"),
+                    // SizedBox(height: 20.0),
+                    ProfileDetail(label: "Email", value: user!.email),
                   ],
                 ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () async {
+                      dynamic result = await _auth.signOut();
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(10.0),
+                      child: Text("Sign Out", style: TextStyle(fontSize: 17.0),),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -395,12 +450,12 @@ class _ProfileState extends State<Profile> {
 
 class ProfileDetail extends StatelessWidget {
 
-  final String label;
-  final String value;
+  final String ? label;
+  final String ? value;
 
   const ProfileDetail({
-    required this.label,
-    required this.value,
+    this.label,
+    this.value,
     Key? key,
   }) : super(key: key);
 
@@ -417,7 +472,7 @@ class ProfileDetail extends StatelessWidget {
         ),
         const SizedBox(width: 10.0),
         Text(
-            value,
+            value!,
             style: const TextStyle(
                 fontWeight: FontWeight.normal,
                 fontSize: 18.0,
